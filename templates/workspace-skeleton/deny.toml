@@ -1,0 +1,138 @@
+[advisories]
+version = 2
+# Fails CI if any dependency has a published advisory.
+yanked = "deny"
+
+[licenses]
+version = 2
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause"
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"   # flag, don't fail, when two versions of a crate are in the tree
+wildcards = "deny"           # never allow `crate = "*"` anywhere
+
+# ARCHITECTURE RULES start
+#
+# DOMAIN LAYER
+# {{ project_slug }}-domain is the domain layer of the application. All workspace
+# crates may depend on it, and it should be pure business logic.
+[[bans.deny]]
+name = "{{ project_slug }}-core"
+wrappers = [
+    "{{ project_slug }}-app",                                                 # Blue tier    - ApplicationCore
+                                                                # Red tier      - InfrastructureAdapters
+    "{{ project_slug }}-cli",                                                 # Yellow tier   - Adapter Binaries
+]
+
+# APPLICATION LAYER
+# {{ project_slug }}-app may not be a direct dep of Green tier (only Green is "{{ project_slug }}-domain")
+# Every other tier, including siblings, may legitimately depend on it.
+[[bans.deny]]
+name = "{{ project_slug }}-app"
+wrappers = [
+                                                                # Red tier      - InfrastructureAdapters
+    "{{ project_slug }}-cli",                                                 # Yellow tier   - Adapter Binaries
+]
+
+# INFRASTRUCTURE LAYER
+# <<<The following is speculative for now and will be added as we build out the crates.>>>
+# {{ project_slug }}-store, {{ project_slug }}-grpc, {{ project_slug }}-mcu, {{ project_slug }}-vision, {{ project_slug }}-otel, {{ project_slug }}-policy, {{ project_slug }}-matter are infrastructure adapters.
+# They should not be depended on directly by Green tier crates (only Green is "{{ project_slug }}-core")
+# or by Blue tier crates (only Blue is "{{ project_slug }}-app").
+# Every other tier, including siblings, may legitimately depend on them.
+# [[bans.deny]]
+# name = "{{ project_slug }}-store"
+# wrappers = [
+#     "{{ project_slug }}-grpc", "{{ project_slug }}-mcu", "{{ project_slug }}-vision", "{{ project_slug }}-otel",        # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-policy", "{{ project_slug }}-matter",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",        # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-grpc"
+# wrappers = [
+#     "{{ project_slug }}-store", "{{ project_slug }}-mcu", "{{ project_slug }}-vision", "{{ project_slug }}-otel",       # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-policy", "{{ project_slug }}-matter",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",        # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-mcu"
+# wrappers = [
+#     "{{ project_slug }}-grpc", "{{ project_slug }}-store", "{{ project_slug }}-vision", "{{ project_slug }}-otel",      # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-policy", "{{ project_slug }}-matter",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",        # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-vision"
+# wrappers = [
+#     "{{ project_slug }}-grpc", "{{ project_slug }}-mcu", "{{ project_slug }}-store", "{{ project_slug }}-otel",        # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-policy", "{{ project_slug }}-matter",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",       # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-otel"
+# wrappers = [
+#     "{{ project_slug }}-grpc", "{{ project_slug }}-mcu", "{{ project_slug }}-vision", "{{ project_slug }}-store",       # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-policy", "{{ project_slug }}-matter",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",        # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-policy"
+# wrappers = [
+#     "{{ project_slug }}-grpc", "{{ project_slug }}-mcu", "{{ project_slug }}-vision", "{{ project_slug }}-otel",        # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-store", "{{ project_slug }}-matter",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",        # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-matter"
+# wrappers = [
+#     "{{ project_slug }}-grpc", "{{ project_slug }}-mcu", "{{ project_slug }}-vision", "{{ project_slug }}-otel",        # Siblings      - InfrastructureAdapters
+#     "{{ project_slug }}-policy", "{{ project_slug }}-store",
+#     "{{ project_slug }}-cli", "{{ project_slug }}-web", "{{ project_slug }}-agent", "{{ project_slug }}-leader",        # Yellow tier   - Adapter Binaries
+#     "{{ project_slug }}-firmware",
+# ]
+
+# ADAPTER LAYER
+# The following is speculative for now, but will be added as needed
+# [[bans.deny]]
+# name = "{{ project_slug }}-cli"
+# wrappers = []                                                           # Nothing in this workspace depends on a binary crate
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-web"
+# wrappers = []                                                           # Nothing in this workspace depends on a binary crate
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-agent"
+# wrappers = []                                                           # Nothing in this workspace depends on a binary crate
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-leader"
+# wrappers = []                                                           # Nothing in this workspace depends on a binary crate
+
+# [[bans.deny]]
+# name = "{{ project_slug }}-firmware"
+# wrappers = []                                                           # Nothing in this workspace depends on a binary crate
+
+# ARCHITECTURE RULES end
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

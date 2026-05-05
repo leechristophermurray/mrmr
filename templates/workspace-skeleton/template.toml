@@ -5,7 +5,14 @@ authors = ["Your Name <you@example.com>"]
 keywords = ["rust", "workspace", "tree-architecture"]
 
 # Files we don't want copied into the generated project.
-ignore = ["README.md"]
+ignore = [
+    "init_git.sh",
+    "TEMPLATE.md",
+]
+
+# Files copied verbatim — Tera will not try to render them.
+# GitHub Actions uses `${{ ... }}` which collides with Tera's `{{ ... }}`.
+copy_without_render = [".github/workflows/*.yml"]
 
 # Run after questions are answered, before generation. Good for
 # extra validation. (Hooks are templated executable scripts; we
@@ -13,29 +20,52 @@ ignore = ["README.md"]
 pre_gen_hooks = []
 
 # Run after generation. Useful for `git init`, etc.
-post_gen_hooks = [
-    { name = "init git", path = "init_git.sh" },
+# post_gen_hooks = [
+#     { name = "init git", path = "init_git.sh" },
+# ]
+
+
+cleanup = [
+    { name = "include_prek", value = false, paths = ["prek.toml"]},
+    { name = "include_cargo_deny", value = false, paths = ["deny.toml"]},
 ]
 
 [[variables]]
-name       = "project_name"
+name       = "project_short_name"
 default    = "my-project"
-prompt     = "What is the name of this project? (kebab-case)"
+prompt     = "What is the binary name of this project? (kebab-case)"
 validation = "^[a-z][a-z0-9-]+$"
 
 [[variables]]
+name       = "project_canonical_name"
+default    = "My Project"
+prompt     = "What is the canonical name of this project?"
+validation = "^[A-Za-z][A-Za-z0-9- ]+$"
+
+[[variables]]
 name    = "project_slug"
-default = "{{ project_name | kebab_case }}"
+default = "{{ project_short_name | kebab_case }}"
 derived = true
 
 [[variables]]
 name    = "binary_prefix"
-default = "{{ project_name | replace(from='-', to='') | truncate(length=4, end='') }}"
+default = "{{ project_short_name | replace(from='-', to='') | truncate(length=4, end='') }}"
 prompt  = "Binary prefix (short, lowercase)"
 
 [[variables]]
+name    = "crate_prefix"
+default = "{{ project_slug | replace(from='-', to='_') }}"
+derived = true
+
+[[variables]]
 name   = "authors_line"
+default = "Christopher Lee Murray <lee.christopher.murray@gmail.com>"
 prompt = "Authors line (Name <email>)"
+
+[[variables]]
+name   = "authors_git_username"
+default = "leechristophermurray"
+prompt = "Authors git username"
 
 [[variables]]
 name    = "edition"
@@ -66,4 +96,5 @@ prompt  = "Include cargo-deny configuration?"
 
 [[variables]]
 name   = "description"
+default = "MurMur is an open, standards-grade coordination platform for small fleets of edge-resident robots."
 prompt = "Short description of the project"
