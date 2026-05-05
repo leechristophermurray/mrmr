@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Runs at 00:00 UTC every day to catch new RustSec advisories
+  schedule:
+    - cron: "0 0 * * *"
+
+# Cancel previous runs if a new commit is pushed to the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint & Prek
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Target Directory
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install prek
+        uses: taiki-e/install-action@v2
+        with: { tool: prek }
+
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- --deny warnings
+
+      - name: run prek
+        run: prek run --all-files --show-diff-on-failure
+
+      # Consistently run all prek hooks in one go
+      - name: run prek hooks
+        run: prek run --all-files --hook-stage pre-push --show-diff-on-failure
+
+  architecture:
+    name: Check Architecture
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Architecture via cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+          arguments: --all-features
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # Scans Cargo.lock against the RustSec Advisory Database
+      - name: Audit Rust Dependencies
+        uses: actions-rust-lang/audit@v1
+        with:
+          # Fails the build if any vulnerabilities are found
+          deny: warnings
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Cache Target Directory
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Tests
+        run: cargo test --workspace --all-targets --all-features
+
+  dco:
+    name: DCO Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Get history to find base commit
+
+      - name: Validate Signed-off-by
+        shell: bash
+        run: |
+          # Use different ranges for PRs vs Pushes to main
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            # On push to main, just check the last commit
+            RANGE="HEAD^..HEAD"
+          fi
+
+          echo "Checking commits in range: $RANGE"
+          MISSING=0
+          for commit in $(git rev-list "$RANGE"); do
+            if ! git log --format=%B -n 1 "$commit" | grep -q "Signed-off-by:"; then
+              echo "❌ Error: Commit $commit is missing 'Signed-off-by:'"
+              MISSING=1
+            fi
+          done
+
+          if [ $MISSING -eq 1 ]; then exit 1; fi
+          echo "✅ All commits signed off."
+
+  commitlint:
+    name: Commitlint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check PR title matches conventional commits
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert

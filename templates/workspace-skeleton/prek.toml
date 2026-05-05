@@ -1,0 +1,31 @@
+[[repos]]
+repo = "local"
+[[repos.hooks]]
+id          = "cargo-fmt"
+name        = "cargo fmt"
+language    = "system"
+entry       = "cargo fmt --all --check"
+files       = '\.rs$'
+pass_filenames = false
+
+[[repos.hooks]]
+id          = "cargo-clippy"
+name        = "cargo clippy"
+language    = "system"
+entry       = "cargo clippy --all-targets --all-features -- -D warnings"
+files       = '\.rs$'
+pass_filenames = false
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev  = "v6.0.0"
+[[repos.hooks]]
+id = "trailing-whitespace"
+[[repos.hooks]]
+id = "end-of-file-fixer"
+[[repos.hooks]]
+id = "check-yaml"
+[[repos.hooks]]
+id = "check-toml"
+[[repos.hooks]]
+id = "check-added-large-files"
