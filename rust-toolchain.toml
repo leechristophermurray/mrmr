@@ -1,0 +1,9 @@
+# rust-toolchain.toml
+[toolchain]
+channel = "1.95.0"
+components = [
+    "rustfmt",
+    "clippy",
+    "rust-src",
+]
+profile = "minimal"

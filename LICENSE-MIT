@@ -1,0 +1,58 @@
+MIT License
+
+mrmr-app — 🔵 the orchestration layer
+[package]
+name = "mrmr-app"
+# ... same shape ...
+
+[dependencies]
+mrmr-core = { path = "../mrmr-core" }
+That path = "../mrmr-core" is the dependency rule made physical. app declares it depends on core. There is no way to write mrmr_app::foo from inside mrmr-core because Cargo enforces acyclic dependencies.
+mrmr-cli — 🟡 the outer layer (binary)
+[package]
+name = "mrmr-cli"
+# ... same shape ...
+
+[[bin]]
+name = "mrmr"
+path = "src/main.rs"
+
+[dependencies]
+mrmr-core = { path = "../mrmr-core" }
+mrmr-app  = { path = "../mrmr-app" }
+main.rs prints a hello message and exits. We’re not writing real logic this week; we’re establishing the skeleton and the pipeline.
+11. Anti-Patterns to Recognize
+Now and forever:
+Smell
+Why
+One giant crate, all mod-based
+No build-system enforcement of architecture. Drift inevitable.
+version = "*" in deps
+Non-reproducible builds. Sudden breakage when upstream releases.
+unwrap() in library code
+Panics on input you don’t control = uptime bug waiting.
+No CI, “I’ll run tests locally”
+The gate decays the moment one person ships without running them.
+git commit -m "wip" on main
+Commit history becomes archaeology, not documentation.
+Toolchain unpinned
+Future “it
+Copyright (c) 2026 Christopher Murray
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
