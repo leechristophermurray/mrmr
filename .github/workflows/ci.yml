@@ -41,7 +41,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- --deny warnings
 
       - name: run prek
-        run: prek run --all-files --show-diff-on-failure
+        run: prek run --config prek.toml --all-files --show-diff-on-failure
 
       # Consistently run all prek hooks in one go
       - name: run prek hooks
