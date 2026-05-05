@@ -1,0 +1,69 @@
+name = "Rust workspace skeleton (MurMur-style)"
+description = "Tree-architected Cargo workspace with prek + CI + dual license"
+kickstart_version = 1
+authors = ["Your Name <you@example.com>"]
+keywords = ["rust", "workspace", "tree-architecture"]
+
+# Files we don't want copied into the generated project.
+ignore = ["README.md"]
+
+# Run after questions are answered, before generation. Good for
+# extra validation. (Hooks are templated executable scripts; we
+# can leave this empty for v1.)
+pre_gen_hooks = []
+
+# Run after generation. Useful for `git init`, etc.
+post_gen_hooks = [
+    { name = "init git", path = "init_git.sh" },
+]
+
+[[variables]]
+name       = "project_name"
+default    = "my-project"
+prompt     = "What is the name of this project? (kebab-case)"
+validation = "^[a-z][a-z0-9-]+$"
+
+[[variables]]
+name    = "project_slug"
+default = "{{ project_name | kebab_case }}"
+derived = true
+
+[[variables]]
+name    = "binary_prefix"
+default = "{{ project_name | replace(from='-', to='') | truncate(length=4, end='') }}"
+prompt  = "Binary prefix (short, lowercase)"
+
+[[variables]]
+name   = "authors_line"
+prompt = "Authors line (Name <email>)"
+
+[[variables]]
+name    = "edition"
+default = "2024"
+prompt  = "Rust edition"
+choices = ["2024", "2021"]
+
+[[variables]]
+name    = "rust_version"
+default = "1.95.0"
+prompt  = "Pinned Rust toolchain version"
+
+[[variables]]
+name    = "license"
+default = "Apache-2.0 OR MIT"
+prompt  = "License"
+choices = ["Apache-2.0 OR MIT", "MIT", "Apache-2.0", "AGPL-3.0-or-later"]
+
+[[variables]]
+name    = "include_prek"
+default = true
+prompt  = "Include prek pre-commit configuration?"
+
+[[variables]]
+name    = "include_cargo_deny"
+default = true
+prompt  = "Include cargo-deny configuration?"
+
+[[variables]]
+name   = "description"
+prompt = "Short description of the project"
