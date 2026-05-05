@@ -314,27 +314,27 @@ pub enum AgentStatus {
 
 pub enum CommandKind {
     Move { direction: Direction, distance_cm: u16 },# {{ project_canonical_name }} — A Swarm-Capable Robotics Coordination Platform in Rust
-    
+
     > **{{ crate_prefix }}** /ˈmɜːrmɜːr/ — a coordinated, distributed action emerging from
     > many small voices.
     >
     > A homophone of *Murmuration* (a starling flock's emergent flight) and
     > a nod to the author's surname. Binary prefix: `{{ crate_prefix }}`. Wire protocol:
     > `{{ crate_prefix }}/v1`. **License:** Apache-2.0 OR MIT.
-    
+
     ---
-    
+
     ## 1. Vision
-    
+
     {{ project_canonical_name }} is an open, standards-grade coordination platform for small fleets
     of edge-resident robots. It runs on commodity Linux SBCs (Raspberry Pi
     class) with embedded MCUs (RP2040 / ESP32-C3) handling real-time actuator
     and sensor work. Robots act individually under operator command, respond
     to ASL gesture commands recognized through their own cameras, or
     coordinate as a swarm to execute a shared mission.
-    
+
     **Three distinguishing properties.**
-    
+
     1. **Protocol-first.** The wire protocol (`{{ crate_prefix }}/v1`, defined in Protobuf)
        is versioned, documented, and treated as a public contract from day
        one. The Rust implementation in this repository is *one* conformant
@@ -347,15 +347,15 @@ pub enum CommandKind {
        network. No external service is required for any feature. Optional
        integrations (Matter, OTel export, OTA update) are explicit, opt-in,
        and isolated behind ports.
-    
+
     This document is the **specification**. It is paired with
     `00-curriculum-overview.md`, the learning roadmap, which sequences
     construction so each phase teaches a clean slice of Rust.
-    
+
     ---
-    
+
     ## 2. Glossary
-    
+
     | Term | Meaning |
     |---|---|
     | **Agent** | The Rust daemon on each robot's Pi. One agent per robot. |
@@ -368,13 +368,13 @@ pub enum CommandKind {
     | **Cluster** | All reachable nodes in a deployment (1 leader + N agents + 1 observability). |
     | **Protocol** | The `{{ crate_prefix }}/v1` wire format, defined in `{{ crate_prefix }}-proto/src/v1.proto`. |
     | **Engine** | The Rust workspace producing all binaries. |
-    
+
     ---
-    
+
     ## 3. Goals & Non-Goals
-    
+
     ### v1.0 — must ship by month 18
-    
+
     1. **One physical robot**, chassis printed on Bambu A1 mini, differential-drive base, MCU-controlled actuator layer running {{ crate_prefix }} firmware in `no_std` Rust.
     2. **`{{ crate_prefix }}-leader`** running on Pi5-16GB; **`{{ crate_prefix }}-agent`** running on the robot's Pi5-8GB; **observability stack** running on Pi4. Leader↔agent over mTLS gRPC.
     3. **ASL recognition**: 10–15 chosen command signs, single-signer view, explicit confidence thresholds, visible reject path.
@@ -389,94 +389,94 @@ pub enum CommandKind {
     8. **Hardened production posture**: mTLS everywhere, AppArmor profiles, systemd units with restricted capabilities, signed releases, minimal attack surface.
     9. **NIST 800-82 + NIST 800-213** control mapping documented in `docs/COMPLIANCE.md` and audited against {{ project_canonical_name }}'s actual configuration.
     10. **Wire protocol** `{{ crate_prefix }}/v1` published as a versioned spec with an RFC process and a conformance test suite.
-    
+
     ### v2.0+ — explicit stretch
-    
+
     - Robots 2 and 3 *physically built* and operating in coordinated missions.
     - Decentralized swarm primitives (no-leader formation, simple consensus on shared actions).
     - GPUI desktop client (`{{ crate_prefix }}-studio`) as alternative to web dashboard.
     - Custom Matter cluster for richer robot semantics.
     - Continuous (sentence-level) ASL recognition.
     - OTA firmware updates from leader to MCUs.
-    
+
     ### Explicit non-goals — will not build
-    
+
     - ROS / ROS2 compatibility. {{ project_canonical_name }} is parallel.
     - General-purpose robotics platform. Targets *small home/lab fleets*.
     - Cloud-only operation. Cloud is opt-in, never required.
     - Translation of arbitrary ASL. v1.0 is *closed-vocabulary command recognition*, not language translation. This boundary is a public promise.
     - Formal Matter certification at v1.0.
-    
+
     ---
-    
+
     ## 4. System Topology
-    
+
     ```mermaid
     graph TB
       subgraph LAN["Home LAN · Wireguard mesh"]
         direction TB
-    
+
         subgraph LEADER["Pi5-16GB · LEADER"]
           L1["{{ crate_prefix }}-leader<br/>(coordinator + CA)"]
           L2["{{ crate_prefix }}-web<br/>(Leptos SSR)"]
           L3["{{ crate_prefix }}-matter<br/>(Matter bridge)"]
         end
-    
+
         subgraph AGENT["Pi5-8GB · AGENT (×1 in v1.0)"]
           A1["{{ crate_prefix }}-agent"]
           A2["vision pipeline<br/>(tract + ONNX)"]
           A3["mcu-link"]
         end
-    
+
         subgraph OBS["Pi4 · OBSERVABILITY"]
           O1["Prometheus + Grafana"]
           O2["OTel collector"]
         end
-    
+
         subgraph DEV["X1 Carbon · DEVELOPER"]
           D1["{{ crate_prefix }} CLI"]
           D2["Browser → dashboard"]
         end
-    
+
         LEADER -->|gRPC + mTLS<br/>{{ crate_prefix }}/v1| AGENT
         AGENT -.->|OTLP| OBS
         LEADER -.->|OTLP| OBS
         DEV -->|HTTPS| LEADER
       end
-    
+
       subgraph ROBOT["One robot (v1.0)"]
         H1["Pi5-8GB"] <-->|UART| H2["MCU<br/>(no_std firmware)"]
         H2 -->|PWM| H3["Motor driver"]
         H2 <-->|I²C| H4["IMU"]
         H1 <-->|UVC| H5["USB camera"]
       end
-    
+
       subgraph MATTER["Matter (opt-in)"]
         M1["HomeKit / Google /<br/>Home Assistant"]
       end
-    
+
       AGENT --- ROBOT
       M1 -.->|Matter over IP| LEADER
-    
+
       style LEADER fill:#1e3a5f,stroke:#4a90e2,color:#fff
       style AGENT fill:#5a2d6b,stroke:#ba68c8,color:#fff
       style OBS fill:#1f4d2e,stroke:#4caf50,color:#fff
       style DEV fill:#5a4d1f,stroke:#ffeb3b,color:#fff
     ```
-    
+
     **Why leader-and-agents in v1.0?** Dramatically simpler to reason about,
     debug, and secure. Decentralized primitives are v2.0, once the
     distributed-systems chops are in. Building peer mesh on day one before
     shipping a working leader is how robotics projects die.
-    
+
     ---
-    
+
     ## 5. Architecture: Tree-Layered Workspace
-    
+
     The dependency rule: **no outer-layer crate is ever imported by an
     inner one**. Enforced by Cargo, verified by `cargo xtask check-arch`
     in CI.
-    
+
     | Crate | Layer | Responsibility | Depends on |
     |---|---|---|---|
     | `{{ crate_prefix }}-core` | 🟢 Domain | Pure types: `AgentId`, `MissionId`, `Command`, `Gesture`, `Status`, errors. | std, serde, jiff |
@@ -495,12 +495,12 @@ pub enum CommandKind {
     | `{{ crate_prefix }}-web` | 🟡 Adapter | Leptos SSR dashboard, served by leader. | core, app, store, grpc |
     | `{{ crate_prefix }}-firmware` | 🟡 Adapter (no_std) | MCU firmware, Embassy-based async. | core (subset, feature `no_std`) |
     | `xtask` | 🟡 Adapter | Custom build tasks (`check-arch`, codegen, release packaging). | std, walkdir |
-    
+
     **16 crates total.** All declared in the workspace at Week 1; we
     materialize real code in roughly half by month 9, all by month 18.
-    
+
     ### 5.1 Dependency rule, visualized
-    
+
     ```mermaid
     graph TB
       subgraph G["🟢 Domain"]
@@ -525,11 +525,11 @@ pub enum CommandKind {
         WEB[{{ crate_prefix }}-web]
         FW["{{ crate_prefix }}-firmware (no_std)"]
       end
-    
+
       APP --> CORE
       APP --> PROTO
       PROTO --> CORE
-    
+
       VIS --> APP
       MCU --> APP
       GRPC --> APP
@@ -537,7 +537,7 @@ pub enum CommandKind {
       MATTER --> APP
       OTEL --> APP
       POLICY --> APP
-    
+
       CLI --> APP
       CLI --> STORE
       CLI --> GRPC
@@ -557,35 +557,35 @@ pub enum CommandKind {
       WEB --> STORE
       WEB --> GRPC
       FW --> CORE
-    
+
       style G fill:#1f4d2e,stroke:#4caf50,color:#fff
       style B fill:#1e3a5f,stroke:#4a90e2,color:#fff
       style R fill:#5a1f1f,stroke:#f44336,color:#fff
       style Y fill:#5a4d1f,stroke:#ffeb3b,color:#fff
     ```
-    
+
     ---
-    
+
     ## 6. The `{{ crate_prefix }}/v1` Protocol
-    
+
     Lives in `crates/{{ crate_prefix }}-proto/src/v1.proto`. **Versioned independently of
     the implementation.** Any change goes through an RFC process:
-    
+
     1. Open issue tagged `rfc:protocol`.
     2. Draft `docs/rfcs/NNNN-short-title.md`.
     3. Review window ≥ 7 days.
     4. If accepted: bump `package {{ crate_prefix }}.v1` to `{{ crate_prefix }}.v2` for breaking
        changes; never modify v1 in a backward-incompatible way.
-    
+
     Backward compatibility within a major version follows
     [Protobuf evolution rules](https://protobuf.dev/programming-guides/proto3/#updating).
-    
+
     ### 6.1 Service surface (sketch)
-    
+
     ```protobuf
     syntax = "proto3";
     package {{ crate_prefix }}.v1;
-    
+
     service Coordinator {
       rpc Enroll(EnrollRequest) returns (EnrollResponse);
       rpc StreamTelemetry(stream TelemetryFrame) returns (Ack);
@@ -594,40 +594,40 @@ pub enum CommandKind {
       rpc ListMissions(MissionFilter) returns (MissionList);
       rpc CancelMission(MissionRef) returns (Ack);
     }
-    
+
     service Vision {
       rpc ClassifyFrame(Frame) returns (Classification);
       rpc StreamRecognitions(stream Frame) returns (stream Recognition);
     }
     ```
-    
+
     Generated Rust lives in `{{ crate_prefix }}-proto/src/generated/` (committed; not
     regenerated at build time — slower and bites people without `protoc`).
-    
+
     ### 6.2 mTLS by default
-    
+
     Every gRPC channel is mTLS. **The leader is the CA at v1.0.** Certs are
     issued via `{{ crate_prefix }} enroll`, stored in `~/.{{ crate_prefix }}/certs/`, expire at 90 days,
     auto-renew at 60. v2.0 considers ACME and SPIFFE.
-    
+
     ---
-    
+
     ## 7. Domain Model (selected)
-    
+
     ```rust
     // In {{ crate_prefix }}-core. No deps except serde + jiff.
-    
+
     pub struct AgentId(Ulid);
     pub struct MissionId(Ulid);
     pub struct CommandId(Ulid);
-    
+
     pub enum AgentStatus {
         Offline,
         Idle,
         Executing { mission: MissionId, step: u32 },
         Error { kind: AgentErrorKind, since: Timestamp },
     }
-    
+
     pub enum CommandKind {
         Move { direction: Direction, distance_cm: u16 },
         Turn { direction: Rotation, degrees: u16 },
@@ -638,13 +638,13 @@ pub enum CommandKind {
         Acknowledge { gesture: GestureKind },
         Custom { name: SmolStr, payload: Bytes },
     }
-    
+
     pub enum GestureKind {
         Hello, Stop, Go, Forward, Back, Left, Right,
         Together, Wait, Help, Yes, No, Acknowledge, Cancel,
         // Frozen at v1.0 — additions go through RFC
     }
-    
+
     pub struct Mission {
         pub id: MissionId,
         pub created: Timestamp,
@@ -652,21 +652,21 @@ pub enum CommandKind {
         pub steps: Vec<MissionStep>,
         pub assignment: Assignment, // Single(AgentId) | Broadcast | Quorum(usize)
     }
-    
+
     #[derive(thiserror::Error, Debug)]
     pub enum DomainError { /* … */ }
     ```
-    
+
     The `Slug`-style validated newtype pattern applies here: `AgentId::new`
     validates ULID format; invalid IDs are unrepresentable downstream.
-    
+
     ---
-    
+
     ## 8. Vision Pipeline (ASL Gesture Recognition)
-    
+
     Runs entirely on the agent (each robot has its own camera and
     classifier). Pipeline:
-    
+
     ```mermaid
     flowchart LR
       CAM["USB camera<br/>(nokhwa, MJPEG)"] --> FRAME["frame buffer<br/>(BGR8 @ 15-30fps)"]
@@ -679,12 +679,12 @@ pub enum CommandKind {
       EMIT --> HYST["temporal hysteresis<br/>(N consecutive frames)"]
       HYST --> CMD["map to CommandKind"]
       CMD --> AGENT["agent dispatcher"]
-    
+
       style EMIT fill:#1f4d2e,stroke:#4caf50,color:#fff
       style REJECT fill:#5a4d1f,stroke:#ffeb3b,color:#fff
       style CMD fill:#1e3a5f,stroke:#4a90e2,color:#fff
     ```
-    
+
     **Honesty about scope.** v1.0 promises *closed-vocabulary command
     recognition* of 10–15 isolated signs from a clear, single-signer view.
     This is not "ASL translation" and the documentation will say so. Bias
@@ -692,35 +692,35 @@ pub enum CommandKind {
     problem in the literature; v1.0 ships with a written limitations
     section, model card, and a path for users to provide feedback. Real
     inclusion of Deaf signers in dataset curation is v2.0+ work.
-    
+
     **Implementation order (see curriculum):** weeks 12–15 build the camera
     and frame pipeline; weeks 30–34 add ONNX inference; weeks 35–37 add the
     classifier and hysteresis logic.
-    
+
     ---
-    
+
     ## 9. Matter Integration
-    
+
     Each robot registers as **two clusters** in v1.0:
-    
+
     - `OnOff` — robot active vs idle.
     - `OccupancySensing` — robot reports presence detected via vision.
-    
+
     Implementation via `rs-matter` (project-chip's Rust implementation).
     Wrapped behind a `MatterBridge` port in `{{ crate_prefix }}-app` so the rs-matter API
     churn (it's pre-1.0) doesn't ripple. Custom clusters → v2.0.
-    
+
     The leader runs a single Matter accessory exposing each robot as a
     sub-device. From an operator's HomeKit / Google Home / Home Assistant
     view, {{ project_canonical_name }} looks like a normal Matter bridge with N child devices.
-    
+
     ---
-    
+
     ## 10. Web Dashboard (Leptos SSR + Islands)
-    
+
     Served by `{{ crate_prefix }}-leader` (or as a sidecar process — TBD in week 26
     when we get there).
-    
+
     **Pages:**
     - `/` — cluster overview, agent grid, recent missions.
     - `/agents/:id` — telemetry charts, current mission, live camera with
@@ -730,7 +730,7 @@ pub enum CommandKind {
     - `/gestures` — vocabulary reference, live gesture-test mode.
     - `/automations` — declarative rules engine UI.
     - `/system` — node health, certs, releases.
-    
+
     **Architecture:**
     - Most routes are server-rendered (fast first paint).
     - Live data via SSE from `/api/v1/events` (multiplexed event stream).
@@ -738,41 +738,41 @@ pub enum CommandKind {
       hydrated islands.
     - Auth: session cookie + WebAuthn (FIDO2) for operator login. CLI uses
       client cert auth.
-    
+
     ---
-    
+
     ## 11. Security & Compliance
-    
+
     ### 11.1 Defense in depth
-    
+
     1. **Identity:** every node has a unique mTLS cert issued by the leader's CA.
     2. **Network:** Wireguard mesh between Pis (defense for cleartext leaks).
     3. **Authz:** capability-based — each cert encodes its grants in extensions.
     4. **OS hardening:** systemd units with `ProtectSystem=strict`, `PrivateUsers=true`, `CapabilityBoundingSet=`, AppArmor profiles per binary.
     5. **Supply chain:** `cargo-deny` (CVEs, licenses, sources), reproducible-ish builds with `--locked`, signed release artifacts, SBOM via `cargo-sbom`.
     6. **Runtime:** `{{ crate_prefix }}-policy` checks invariants at startup (e.g., refuses to start if certs in plaintext, refuses to bind to 0.0.0.0 without explicit flag).
-    
+
     ### 11.2 Compliance posture
-    
+
     `docs/COMPLIANCE.md` (built progressively in weeks 41–42) maps
     {{ project_canonical_name }}'s controls to:
-    
+
     - **NIST 800-82r3** (Operational Technology / ICS Security) — {{ project_canonical_name }} is a small ICS.
     - **NIST 800-213 / 213A** (IoT Device Cybersecurity Capabilities).
     - **NIST 800-53 moderate baseline** subset, applied to engine repo + CI.
     - **CIS Linux Benchmarks** for the Pi nodes.
     - **SOC 2 Type 2** control families — design and tabletop, not formal audit.
     - **GDPR** — only relevant if telemetry export is enabled and exits the LAN.
-    
+
     HIPAA is **not** practiced by {{ project_canonical_name }} (no PHI). If still desired, see
     the curriculum's third-capstone option.
-    
+
     ---
-    
+
     ## 12. CI/CD Pipeline
-    
+
     **Engine repo CI runs on every push:**
-    
+
     1. `cargo fmt --check`
     2. `cargo clippy --all-targets --all-features -- -D warnings`
     3. `cargo test --workspace --all-features`
@@ -781,9 +781,9 @@ pub enum CommandKind {
     6. Conventional-commit lint on PR titles
     7. `cargo audit`
     8. **(week 41+)** SBOM generation + sign
-    
+
     **Release pipeline (week 52):**
-    
+
     1. Tag `vX.Y.Z` triggers cross-compilation matrix:
        - `aarch64-unknown-linux-gnu` (Pi5/Pi4)
        - `armv7-unknown-linux-gnueabihf` (older Pis, optional)
@@ -791,13 +791,13 @@ pub enum CommandKind {
        - `riscv32imc-unknown-none-elf` (ESP32-C3 firmware, if used)
     2. Artifacts signed with cosign.
     3. Release notes generated from conventional commits via `git-cliff`.
-    
+
     ---
-    
+
     ## 13. Operational Readiness
-    
+
     **v1.0 ships these documents** alongside the code:
-    
+
     - `docs/OPERATIONS.md` — onboarding runbook for adding agents 2–N. Walks through hardware prep, OS image flashing, network config, certificate enrollment, agent installation, verification tests, and troubleshooting.
     - `docs/INCIDENT-RESPONSE.md` — what to do when a robot misbehaves: emergency halt, log collection, telemetry capture, post-mortem template.
     - `docs/PROTOCOL.md` — the `{{ crate_prefix }}/v1` protocol reference for external implementers.
@@ -806,26 +806,26 @@ pub enum CommandKind {
     - `docs/CONTRIBUTING.md` — code style, RFC process, commit conventions, DCO.
     - `docs/CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.
     - `docs/GOVERNANCE.md` — how decisions are made (BDFL → council, depending on adoption).
-    
+
     **v1.0 acceptance criteria includes:** a fresh maintainer follows
     `OPERATIONS.md` from a clean Pi image and successfully enrolls a *test*
     second agent (real Pi or VM) without help. If the runbook is unclear,
     v1.0 isn't done.
-    
+
     ---
-    
+
     ## 14. Versioning & Standards Posture
-    
+
     - **License:** Apache-2.0 OR MIT (Rust-ecosystem dual). Both `LICENSE-APACHE` and `LICENSE-MIT` files at repo root.
     - **DCO** (Developer Certificate of Origin) for contributions. No CLA.
     - **SemVer** for crates. Implementation versions independent of protocol version.
     - **Protocol versioning:** `{{ crate_prefix }}/v1` is the v1.0 deliverable. Breaking changes mint `{{ crate_prefix }}/v2`. Multiple versions can be supported in one binary; deprecation policy: 6-month overlap minimum.
     - **Conformance test suite** at `crates/{{ crate_prefix }}-conformance` — language-agnostic test vectors + a Rust runner. Other implementations can run the suite to claim conformance.
-    
+
     ---
-    
+
     ## 15. Repository Conventions
-    
+
     ```
     {{ crate_prefix }}/
     ├── Cargo.toml              ← workspace manifest
@@ -879,18 +879,18 @@ pub enum CommandKind {
             ├── release.yml
             └── codeql.yml
     ```
-    
+
     **Branching:** trunk-based. `main` always green. Feature branches → PR
     → squash-merge. Branch protection enforces CI green + signed commits +
     linear history.
-    
+
     **Commits:** Conventional Commits 1.0.0, scope = crate name.
     Example: `feat(grpc): add streaming dispatch with backpressure`.
-    
+
     ---
-    
+
     ## 16. v1.0 → v2.0+ Roadmap
-    
+
     | Milestone | Target | Deliverable |
     |---|---|---|
     | **M0** | Month 1 | Workspace skeleton, CI green, foundation. |
@@ -906,11 +906,11 @@ pub enum CommandKind {
     | **v1.1** | Month 21 | Robot 2 physically built, multi-agent missions exercised. |
     | **v1.2** | Month 24 | Robot 3, GPUI desktop client, custom Matter cluster. |
     | **v2.0** | Month 30 | Decentralized swarm primitives, OTA firmware. |
-    
+
     This is the line. We will deviate; we will not abandon.
-    
+
     ---
-    
+
     *{{ project_canonical_name }} — hum together, move together.*
 
     Turn { direction: Rotation, degrees: u16 },
