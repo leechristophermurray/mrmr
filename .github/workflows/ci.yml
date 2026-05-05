@@ -45,7 +45,7 @@ jobs:
 
       # Consistently run all prek hooks in one go
       - name: run prek hooks
-        run: prek run --all-files --hook-stage pre-push --show-diff-on-failure
+        run: prek run --config prek.toml --all-files --hook-stage pre-push --show-diff-on-failure
 
   architecture:
     name: Check Architecture
