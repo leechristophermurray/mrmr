@@ -6,7 +6,6 @@ name        = "cargo fmt"
 language    = "system"
 entry       = "cargo fmt --all --check"
 files       = '\.rs$'
-exclude     = '^templates/'
 pass_filenames = false
 
 [[repos.hooks]]
@@ -15,29 +14,18 @@ name        = "cargo clippy"
 language    = "system"
 entry       = "cargo clippy --all-targets --all-features -- -D warnings"
 files       = '\.rs$'
-exclude     = '^templates/'
 pass_filenames = false
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
 rev  = "v6.0.0"
-
 [[repos.hooks]]
 id = "trailing-whitespace"
-exclude     = '^templates/'
-
 [[repos.hooks]]
 id = "end-of-file-fixer"
-exclude     = '^templates/'
-
 [[repos.hooks]]
 id = "check-yaml"
-exclude     = '^templates/'
-
 [[repos.hooks]]
 id = "check-toml"
-exclude     = '^templates/'
-
 [[repos.hooks]]
 id = "check-added-large-files"
-exclude     = '^templates/'
