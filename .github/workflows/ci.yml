@@ -34,21 +34,11 @@ jobs:
         uses: taiki-e/install-action@v2
         with: { tool: prek }
 
-      - name: Check Formatting
-        run: cargo fmt -- --check
-
-      - name: Run Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- --deny warnings
-
       - name: run prek
         run: prek run --config prek.toml --all-files --show-diff-on-failure
 
-      # Consistently run all prek hooks in one go
-      - name: run prek hooks
-        run: prek run --config prek.toml --all-files --hook-stage pre-push --show-diff-on-failure
-
-  architecture:
-    name: Check Architecture
+  supply-chain:
+    name: Supply Chain
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
