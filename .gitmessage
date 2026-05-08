@@ -1,0 +1,45 @@
+# <type>(<scope>): <subject in imperative mood, ≤72 chars>
+#
+# Conventional Commits 1.0.0 — https://www.conventionalcommits.org
+#   types : feat fix docs style refactor perf test build ci chore revert
+#   scope : crate name without the mrmr- prefix (core, app, cli, grpc, …)
+#           or a layer name (workspace, ci, deps, docs, hardware)
+#   bang  : append ! after type/scope for breaking changes (e.g. feat(proto)!: …)
+#
+# Subject rules:
+#   · imperative mood ("add", not "added" or "adds")
+#   · no trailing period
+#   · ≤72 chars including type/scope/punctuation
+#   · capitalize first word of subject content
+#
+# ─── Body (what & why) ────────────────────────────────────────────────────
+# What problem does this solve? What changes about user-visible or
+# system-visible behavior? The diff already shows what code moved; the
+# body should explain why it had to.
+#
+
+
+
+# ─── Considered & rejected ─────────────────────────────────────────────────
+# What alternatives did you weigh? Why is this the right call? This is the
+# single highest-value section in any commit body — future-you and future
+# reviewers rediscover what you considered far more often than what you did.
+#
+
+
+
+# ─── Refs ──────────────────────────────────────────────────────────────────
+# Refs: #<issue>, RFC NNNN, ADR-NNNN
+# Closes: #<issue>            (only when this commit fully closes it)
+# Breaking: <terse description of the break, surfaced in CHANGELOG>
+#
+
+
+
+# ─── Reminders ─────────────────────────────────────────────────────────────
+# · Lines starting with '#' are stripped before commit.
+# · Keep body lines ≤72 chars; long URLs may exceed.
+# · `Signed-off-by:` is added automatically by `git commit -s`.
+#   This repo has `format.signoff = true` configured, so just `git commit`.
+# · Your private journal lives at $MRMR_JOURNAL (default:
+#   .git/COMMIT_JOURNAL.md). It is never committed. Distill, don't paste.

@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# .githooks/prepare-commit-msg
+#
+# Seeds the commit message template based on the current branch name.
+# Runs *before* the editor opens; gets the message file as $1 and may
+# rewrite it.
+#
+# Branch-name conventions assumed (from Week 1 concept doc §6):
+#   feat/<short-kebab>          → feat(<scope?>):
+#   fix/<short-kebab>           → fix(<scope?>):
+#   chore/<short-kebab>         → chore(<scope?>):
+#   docs/<short-kebab>          → docs(<scope?>):
+#   refactor/<short-kebab>      → refactor(<scope?>):
+#   perf/<short-kebab>          → perf(<scope?>):
+#   test/<short-kebab>          → test(<scope?>):
+#   build/<short-kebab>         → build(<scope?>):
+#   ci/<short-kebab>            → ci(<scope?>):
+#
+# `<scope>` is best-effort: if the branch has a doubled prefix like
+# feat/grpc/streaming, we lift "grpc" as the scope. Otherwise the scope
+# placeholder stays for you to fill in or delete.
+#
+# Optionally appends content from $MRMR_JOURNAL (default
+# .git/COMMIT_JOURNAL.md) as commented lines below the template, so the
+# raw notes are visible in the editor for distillation. Strict comment
+# prefix means none of it lands in the actual commit unless you uncomment.
+#
+# Skip rules — leaves $1 untouched and exits 0:
+#   · Source is "message"   (-m or -F was used; user supplied a message)
+#   · Source is "merge"     (merge commits — git seeds its own message)
+#   · Source is "squash"    (squash via git, not GitHub squash-merge)
+#   · Source is "commit"    (amending — preserve existing message)
+#
+# We DO process source="template" (which is what `commit.template` produces)
+# and source=""  (no template configured; fresh empty buffer).
+#
+# This hook is idempotent: running it twice produces the same file.
+
+set -euo pipefail
+
+readonly COMMIT_MSG_FILE="$1"
+readonly COMMIT_SOURCE="${2:-}"
+# Arg 3 (commit SHA, on amend) intentionally unused.
+
+# --- 1. Skip when not a fresh interactive commit -----------------------------
+case "$COMMIT_SOURCE" in
+  message|merge|squash|commit)
+    exit 0
+    ;;
+esac
+
+# --- 2. Resolve current branch name ------------------------------------------
+# `git symbolic-ref --short HEAD` works during a normal commit; it fails on
+# detached HEAD, in which case we silently skip (rebases, bisects, etc.).
+BRANCH="$(git symbolic-ref --short -q HEAD || true)"
+if [[ -z "$BRANCH" ]]; then
+  exit 0
+fi
+
+# --- 3. Parse branch into (type, scope) --------------------------------------
+# Pattern: <type>/<segment>[/<segment>...]
+#   · <type> must be one of the conventional commit types
+#   · If a second slash exists and the second segment looks like a scope
+#     (lowercase alnum, ≤16 chars, no kebab), use it as scope hint.
+
+TYPE=""
+SCOPE=""
+
+readonly VALID_TYPES_RE='^(feat|fix|chore|docs|refactor|perf|test|build|ci|revert|style)$'
+
+if [[ "$BRANCH" =~ ^([^/]+)/(.+)$ ]]; then
+  candidate_type="${BASH_REMATCH[1]}"
+  rest="${BASH_REMATCH[2]}"
+
+  if [[ "$candidate_type" =~ $VALID_TYPES_RE ]]; then
+    TYPE="$candidate_type"
+
+    # If `rest` itself contains a slash, the segment before the slash is a
+    # scope hint candidate.
+    if [[ "$rest" =~ ^([a-z][a-z0-9]{0,15})/.+$ ]]; then
+      SCOPE="${BASH_REMATCH[1]}"
+    fi
+  fi
+fi
+
+# --- 4. Build the seeded subject line ----------------------------------------
+# Replace the placeholder line in .gitmessage with a partially-filled one.
+# The user finishes the subject; type and scope are already there.
+
+SUBJECT_PLACEHOLDER="# <type>(<scope>): <subject in imperative mood, ≤72 chars>"
+
+if [[ -n "$TYPE" && -n "$SCOPE" ]]; then
+  SEEDED="${TYPE}(${SCOPE}): "
+elif [[ -n "$TYPE" ]]; then
+  SEEDED="${TYPE}(<scope>): "
+else
+  # Branch name didn't match our conventions; leave placeholder visible.
+  SEEDED=""
+fi
+
+# Only seed if the template's placeholder line is present (idempotency:
+# don't re-seed an already-seeded message on a re-edit).
+if [[ -n "$SEEDED" ]] && grep -qF "$SUBJECT_PLACEHOLDER" "$COMMIT_MSG_FILE"; then
+  # Use a tmp file + mv pattern (atomic; survives interrupted runs).
+  TMP="$(mktemp "${COMMIT_MSG_FILE}.XXXXXX")"
+  trap 'rm -f "$TMP"' EXIT
+
+  # Replace the placeholder comment line with a real seeded line.
+  # We don't insert *above* it (would double-seed on repeat runs).
+  awk -v seeded="$SEEDED" -v placeholder="$SUBJECT_PLACEHOLDER" '
+    $0 == placeholder { print seeded; next }
+    { print }
+  ' "$COMMIT_MSG_FILE" > "$TMP"
+  mv "$TMP" "$COMMIT_MSG_FILE"
+  trap - EXIT
+fi
+
+# --- 5. Surface the working journal as commented hint block ------------------
+# Only append if we haven't already (idempotency on this section too).
+
+JOURNAL_MARKER="# ─── Working journal (for distillation, not commit body) ──────────────"
+
+if ! grep -qF "$JOURNAL_MARKER" "$COMMIT_MSG_FILE"; then
+
+GIT_DIR="$(git rev-parse --git-dir)"
+readonly JOURNAL="${MRMR_JOURNAL:-${GIT_DIR}/COMMIT_JOURNAL.md}"
+
+if [[ -s "$JOURNAL" ]]; then
+  {
+    echo
+    echo "$JOURNAL_MARKER"
+    echo "# Source: $JOURNAL"
+    echo "# Lines below are stripped automatically. Copy distilled text above."
+    echo "#"
+    # Prefix every line with "# " so git strips it. Preserve blank lines.
+    sed 's/^/# /' "$JOURNAL"
+  } >> "$COMMIT_MSG_FILE"
+fi
+
+fi  # end journal-marker idempotency guard
+
+exit 0
